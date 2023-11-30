@@ -90,9 +90,11 @@ def train_model(dataset_name, model_type):
         raise AssertionError("Wrong!")
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=l2_reg)
+
     model.to(device)
     criterion.to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=l2_reg)
 
     best_val_acc = 0.0
     best_val_loss = 100.0
@@ -105,9 +107,14 @@ def train_model(dataset_name, model_type):
     train_losses, train_accuracies = [], []
     valid_losses, valid_accuracies = [], []
 
+    training_time_total = 0
     for epoch in range(NUM_EPOCHS):
         # Train the model on the training set.
+        training_time_start = time()
         train_loss, train_accuracy = train(model, device, dataset[0], criterion, optimizer)
+        training_time_end = time()
+
+        training_time_total += training_time_end - training_time_start
 
         # Validate the model using the validation set.
         valid_loss, valid_accuracy, valid_results = evaluate(model, device, dataset[0], criterion, dataset[0].val_mask)
@@ -143,7 +150,7 @@ def train_model(dataset_name, model_type):
     # Test the model performance on the testing set.
     test_loss, test_accuracy, test_results = evaluate(best_model, device, dataset[0], criterion, dataset[0].test_mask)
 
-    return test_accuracy
+    return test_accuracy, training_time_total
 
 
 if __name__ == '__main__':
@@ -159,12 +166,11 @@ if __name__ == '__main__':
             training_times = []
 
             for n in range(num_trials):
-                start = time()
-                test_accuracy = train_model(name, model)
-                end = time()
+                print(f'Starting trial {n}')
+                test_accuracy, training_time = train_model(name, model)
 
                 test_accuracies.append(test_accuracy)
-                training_times.append(end - start)
+                training_times.append(training_time)
 
             avg_accuracy = np.mean(test_accuracies)
             std_accuracy = np.std(test_accuracies)
@@ -174,6 +180,6 @@ if __name__ == '__main__':
 
             print(f'''\
 {name} - {model}:
-    Average Accuracy: {avg_accuracy:.1f} +/- {std_accuracy:.1f}')
+    Average Accuracy: {avg_accuracy:.1f} +/- {std_accuracy:.1f}
     Average training time: {avg_training_time:.3f} +/- {std_training_time:.3f}
 ''')
