@@ -49,12 +49,13 @@ class TransductiveGAT(nn.Module):
 
 
 class GCN(nn.Module):
-    def __init__(self, num_features, num_classes, hidden_features):
+    def __init__(self, num_features, num_classes, hidden_features, activation_function=F.relu):
         super(GCN, self).__init__()
 
         self.num_features = num_features
         self.num_classes = num_classes
         self.hidden_features = hidden_features
+        self.activation_function = activation_function
         self.drop_out = 0.6
         # First Layer:
         self.conv1 = GCNConv(in_channels=self.num_features, out_channels=self.hidden_features)
@@ -68,7 +69,7 @@ class GCN(nn.Module):
         # Apply the first graph convolutional layer
         x = self.conv1(x, edge_index)
         # Apply exponential linear unit activation function
-        x = F.relu(x)
+        x = self.activation_function(x)
         # Apply dropout
         x = torch.dropout(x, self.drop_out, self.training)
         # Apply the second graph convolutional layer

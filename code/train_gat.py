@@ -3,6 +3,7 @@ from time import time
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from models import TransductiveGAT, GCN
 from datasets import get_dataset
 from utils import train, evaluate
@@ -36,16 +37,16 @@ def train_model(dataset_name, model_type):
     Train a model of `model_type` using `dataset_name` as the dataset.
 
     :param dataset_name: Name of dataset. Valid options are in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'}.
-    :param model_type: Model type. Valid options are in {'GAT', 'GCN64'}.
+    :param model_type: Model type. Valid options are in {'GAT', 'GCN64*'}.
 
     :return None:
     :raises ValueError: If `dataset_name` is not in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'} or if
-        `model_type` not in {'GAT', 'GCN64'}.
+        `model_type` not in {'GAT', 'GCN64*'}.
     """
     if dataset_name not in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'}:
         raise ValueError(f"Invalid dataset name {dataset_name}")
 
-    if model_type not in {'GAT', 'GCN64'}:
+    if model_type not in {'GAT', 'GCN64*'}:
         raise ValueError(f"Invalid model type {model_type}")
 
     PATH_OUTPUT = '../output/'  # Specifies the path where to save model to.
@@ -66,10 +67,13 @@ def train_model(dataset_name, model_type):
         # For 'Cora', 'CiteSeer'
         if model_type == 'GAT':
             model = TransductiveGAT(dataset.num_node_features, dataset.num_classes, 8, 1)
-            save_file = 'TransductiveGAT1.pth'
-        if model_type == 'GCN64':
+            save_file = 'Transductive_Cora_Citeseer_GAT.pth'
+        elif model_type == 'GCN64*':
             model = GCN(dataset.num_node_features, dataset.num_classes, 64)
-            save_file = 'TransductiveGCN1.pth'
+            save_file = 'Transductive_Cora_Citeseer_GCN.pth'
+        elif model_type == 'GCN64ELU':
+            model = GCN(dataset.num_node_features, dataset.num_classes, 64)
+            save_file = 'Transductive_Cora_Citeseer_GCNELU.pth'
 
         l2_reg = 0.0005
         learning_rate = 0.005
@@ -78,11 +82,13 @@ def train_model(dataset_name, model_type):
         # For 'Pubmed'
         if model_type == 'GAT':
             model = TransductiveGAT(dataset.num_node_features, dataset.num_classes, 8, 8)
-            save_file = 'TransductiveGAT2.pth'
-
-        if model_type == 'GCN64':
+            save_file = 'TransductivePubmed_GAT.pth'
+        elif model_type == 'GCN64*':
             model = GCN(dataset.num_node_features, dataset.num_classes, 64)
-            save_file = 'TransductiveGCN2.pth'
+            save_file = 'Transductive_Pubmed_GCN.pth'
+        elif model_type == 'GCN64ELU':
+            model = GCN(dataset.num_node_features, dataset.num_classes, 64, activation_function=F.elu)
+            save_file = 'Transductive_Pubmed_GCNELU.pth'
 
         l2_reg = 0.001
         learning_rate = 0.01
@@ -157,7 +163,7 @@ def train_model(dataset_name, model_type):
 
 if __name__ == '__main__':
     dataset_names = ['Cora', 'CiteSeer', 'Pubmed']
-    model_types = ['GAT', 'GCN64']
+    model_types = ['GAT', 'GCN64*', 'GCN64ELU']
     num_trials = 100  # original paper has 100 runs for transductive datasets
 
     for name in dataset_names:
