@@ -8,7 +8,7 @@ def get_dataset(dataset_name):
     else:
         dataset = Planetoid(f'../data/transductive/{dataset_name}', dataset_name, transform=NormalizeFeatures())
 
-    print(f"""Loaded: {dataset_name}
-    Classes: {dataset.num_classes}
-    Feature size: {dataset.num_node_features}""")
+    # print(f"""Loaded: {dataset_name}
+    # Classes: {dataset.num_classes}
+    # Feature size: {dataset.num_node_features}""")
     return dataset
