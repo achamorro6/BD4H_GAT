@@ -42,9 +42,9 @@ class TransductiveGAT(nn.Module):
         return x
 
 
-class GNC(nn.Module):
+class GCN(nn.Module):
     def __init__(self, num_features, num_classes, hidden_features):
-        super(GNC, self).__init__()
+        super(GCN, self).__init__()
 
         self.num_features = num_features
         self.num_classes = num_classes

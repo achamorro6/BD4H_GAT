@@ -1,7 +1,7 @@
 import os
 import torch
 import torch.nn as nn
-from models import TransductiveGAT, GNC
+from models import TransductiveGAT, GCN
 from datasets import get_dataset
 from utils import train, evaluate
 from plots import plot_learning_curves
@@ -49,9 +49,9 @@ def train_model(dataset_name, model_type):
         if model_type == 'GAT':
             model = TransductiveGAT(dataset.num_node_features, dataset.num_classes, 8, 1)
             save_file = 'TransductiveGAT1.pth'
-        if model_type == 'GNC64':
-            model = GNC(dataset.num_node_features, dataset.num_classes, 64)
-            save_file = 'TransductiveGNC1.pth'
+        if model_type == 'GCN64':
+            model = GCN(dataset.num_node_features, dataset.num_classes, 64)
+            save_file = 'TransductiveGCN1.pth'
         l2_reg = 0.0005
         learning_rate = 0.005
 
@@ -61,9 +61,9 @@ def train_model(dataset_name, model_type):
             model = TransductiveGAT(dataset.num_node_features, dataset.num_classes, 8, 8)
             save_file = 'TransductiveGAT2.pth'
 
-        if model_type == 'GNC64':
-            model = GNC(dataset.num_node_features, dataset.num_classes, 64)
-            save_file = 'TransductiveGNC2.pth'
+        if model_type == 'GCN64':
+            model = GCN(dataset.num_node_features, dataset.num_classes, 64)
+            save_file = 'TransductiveGCN2.pth'
         l2_reg = 0.001
         learning_rate = 0.01
     else:
@@ -117,7 +117,7 @@ def train_model(dataset_name, model_type):
 if __name__ == '__main__':
 
     dataset_names = ['Cora', 'CiteSeer', 'Pubmed']
-    model_types = ['GAT', 'GNC64']
+    model_types = ['GAT', 'GCN64']
     num_trials = 100 # original paper has 100 runs for transductive datasets
 
     for name in dataset_names:
