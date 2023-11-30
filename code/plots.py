@@ -1,15 +1,20 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-
-
-# TODO: You can use other packages if you want, e.g., Numpy, Scikit-learn, etc.
 
 
 def plot_learning_curves(file_path, dataset_name, train_losses, valid_losses, train_accuracies, valid_accuracies, model_type):
-    # TODO: Make plots for loss curves and accuracy curves.
-    # TODO: You do not have to return the plots.
-    # TODO: You can save plots as files by codes here or an interactive way according to your preference.
+    """
+    Plot and save the training and validation learning curves of a model to `file_path`
+    The dataset name and model type will be used to construct the title of the plot.
+
+    :param file_path: Path where to save the plots to.
+    :param dataset_name: Name of dataset.
+    :param train_losses: Training losses.
+    :param valid_losses: Validation losses.
+    :param train_accuracies: Training accuracies.
+    :param valid_accuracies: Validation accuracy:
+    :param model_type: Model type.
+    """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 10))
     ax1.plot(np.arange(len(train_losses)), train_losses, label='Training Loss', color='blue')
     ax1.plot(np.arange(len(valid_losses)), valid_losses, label='Validation Loss', color='orange')
