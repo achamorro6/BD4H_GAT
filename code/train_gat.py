@@ -148,9 +148,11 @@ def train_model(dataset_name, model_type):
     # Load the best model that was obtained during training.
     best_model = torch.load(os.path.join(PATH_OUTPUT, save_file))
     # Test the model performance on the testing set.
+    testing_time_start = time()
     test_loss, test_accuracy, test_results = evaluate(best_model, device, dataset[0], criterion, dataset[0].test_mask)
+    testing_time = time() - testing_time_start
 
-    return test_accuracy, training_time_total
+    return test_accuracy, training_time_total, testing_time
 
 
 if __name__ == '__main__':
@@ -164,13 +166,15 @@ if __name__ == '__main__':
 
             test_accuracies = []
             training_times = []
+            testing_times = []
 
             for n in range(num_trials):
                 print(f'Starting trial {n}')
-                test_accuracy, training_time = train_model(name, model)
+                test_accuracy, training_time, testing_time = train_model(name, model)
 
                 test_accuracies.append(test_accuracy)
                 training_times.append(training_time)
+                testing_times.append(testing_time)
 
             avg_accuracy = np.mean(test_accuracies)
             std_accuracy = np.std(test_accuracies)
@@ -178,8 +182,12 @@ if __name__ == '__main__':
             avg_training_time = np.mean(training_times)
             std_training_time = np.std(training_times)
 
+            avg_testing_time = np.mean(testing_times)
+            std_testing_time = np.std(testing_times)
+
             print(f'''\
 {name} - {model}:
     Average Accuracy: {avg_accuracy:.1f} +/- {std_accuracy:.1f}
     Average training time: {avg_training_time:.3f} +/- {std_training_time:.3f}
+    Average testing time: {avg_testing_time:.3f} +/- {std_testing_time:.3f}
 ''')
