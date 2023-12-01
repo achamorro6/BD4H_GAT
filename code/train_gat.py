@@ -37,7 +37,7 @@ def train_model(dataset_name, model_type):
     Train a model of `model_type` using `dataset_name` as the dataset.
 
     :param dataset_name: Name of dataset. Valid options are in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'}.
-    :param model_type: Model type. Valid options are in {'GAT', 'GCN64*'}.
+    :param model_type: Model type. Valid options are in {'GAT', 'GCN64*', 'GCN64ELU'}.
 
     :return None:
     :raises ValueError: If `dataset_name` is not in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'} or if
@@ -46,7 +46,7 @@ def train_model(dataset_name, model_type):
     if dataset_name not in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'}:
         raise ValueError(f"Invalid dataset name {dataset_name}")
 
-    if model_type not in {'GAT', 'GCN64*'}:
+    if model_type not in {'GAT', 'GCN64*', 'GCN64ELU'}:
         raise ValueError(f"Invalid model type {model_type}")
 
     PATH_OUTPUT = '../output/'  # Specifies the path where to save model to.
