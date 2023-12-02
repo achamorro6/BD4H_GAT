@@ -33,11 +33,28 @@ def compute_batch_accuracy(output, target):
         return correct * 100.0 / batch_size
 
 
+def compute_batch_micro_f1(output, target):
+    """Computes the mico F1 for a batch"""
+    with torch.no_grad():
+        batch_size = target.size(0)
+        _, pred = output.max(1)
+
+        true_positive = (pred * target).sum()
+        false_positive = (pred * (1 - target)).sum()
+        false_negative = ((1 - pred) * target).sum()
+        precision = true_positive / (true_positive + false_positive)
+        recall = true_positive / (true_positive + false_negative)
+        micro_f1 = (2 * precision * recall) / (precision + recall)
+
+        return micro_f1 * 100.0 / batch_size
+
+
 def train(model, device, data, criterion, optimizer):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
     accuracy = AverageMeter()
+    f1 = AverageMeter()
 
     model.train()
     end = time.time()
@@ -62,14 +79,16 @@ def train(model, device, data, criterion, optimizer):
 
     losses.update(loss.item(), target.size(0))
     accuracy.update(compute_batch_accuracy(output, target).item(), target.size(0))
+    f1.update(compute_batch_micro_f1(output, target).item(), target.size(0))
 
-    return losses.avg, accuracy.avg
+    return losses.avg, accuracy.avg, f1.avg
 
 
 def evaluate(model, device, data, criterion, mask):
     batch_time = AverageMeter()
     losses = AverageMeter()
     accuracy = AverageMeter()
+    f1 = AverageMeter()
     results = []
     model.eval()
     with torch.no_grad():
@@ -86,9 +105,10 @@ def evaluate(model, device, data, criterion, mask):
         losses.update(loss.item(), target.size(0))
 
         accuracy.update(compute_batch_accuracy(output, target).item(), target.size(0))
+        f1.update(compute_batch_micro_f1(output, target).item(), target.size(0))
 
         y_true = target.detach().to('cpu').numpy().tolist()
         y_pred = output.detach().to('cpu').max(1)[1].numpy().tolist()
         results.extend(list(zip(y_true, y_pred)))
 
-    return losses.avg, accuracy.avg, results
+    return losses.avg, accuracy.avg, f1.avg, results

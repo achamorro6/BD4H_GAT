@@ -54,7 +54,7 @@ def train_model(dataset_name, model_type):
     # available ['Cora', 'CiteSeer', 'Pubmed', 'PPI']
     dataset = get_dataset(dataset_name)
 
-    NUM_EPOCHS = 100000  # Maximum number of iterations.
+    NUM_EPOCHS = 2  # Maximum number of iterations.
     USE_CUDA = True  # Set to True if you want to use GPU.
 
     device = torch.device("cuda" if USE_CUDA and torch.cuda.is_available() else "cpu")
@@ -104,26 +104,30 @@ def train_model(dataset_name, model_type):
     patience_counter = 0
     patience = 100
 
-    train_losses, train_accuracies = [], []
-    valid_losses, valid_accuracies = [], []
+    train_losses, train_accuracies, train_f1s = [], [], []
+    valid_losses, valid_accuracies, valid_f1s = [], [], []
 
     training_time_total = 0
     for epoch in range(NUM_EPOCHS):
         # Train the model on the training set.
         training_time_start = time()
-        train_loss, train_accuracy = train(model, device, dataset[0], criterion, optimizer)
+        train_loss, train_accuracy, train_f1 = train(model, device, dataset[0], criterion, optimizer)
         training_time_end = time()
 
         training_time_total += training_time_end - training_time_start
 
         # Validate the model using the validation set.
-        valid_loss, valid_accuracy, valid_results = evaluate(model, device, dataset[0], criterion, dataset[0].val_mask)
+        valid_loss, valid_accuracy, valid_f1, valid_results = evaluate(model, device, dataset[0], criterion,
+                                                                       dataset[0].val_mask)
 
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
 
         train_accuracies.append(train_accuracy)
         valid_accuracies.append(valid_accuracy)
+
+        train_f1s.append(train_f1)
+        valid_f1s.append(valid_f1)
 
         # If the current accuracy is higher or equal to the current best accuracy and the current loss or lower or equal
         # to the current lowest loss, the current model is considered the best.
@@ -149,35 +153,36 @@ def train_model(dataset_name, model_type):
     best_model = torch.load(os.path.join(PATH_OUTPUT, save_file))
     # Test the model performance on the testing set.
     testing_time_start = time()
-    test_loss, test_accuracy, test_results = evaluate(best_model, device, dataset[0], criterion, dataset[0].test_mask)
+    test_loss, test_accuracy, test_f1, test_results = evaluate(best_model, device, dataset[0], criterion,
+                                                               dataset[0].test_mask)
     testing_time = time() - testing_time_start
 
-    return test_accuracy, training_time_total, testing_time
+    return test_accuracy, test_f1, training_time_total, testing_time
 
 
 if __name__ == '__main__':
     dataset_names = ['Cora', 'CiteSeer', 'Pubmed']
     model_types = ['GAT', 'GCN64']
-    num_trials = 100  # original paper has 100 runs for transductive datasets
+    num_trials = 2  # original paper has 100 runs for transductive datasets
 
     for name in dataset_names:
         for model in model_types:
             print(f'Training: {name} - {model}')
-
-            test_accuracies = []
-            training_times = []
-            testing_times = []
-
+            test_accuracies, test_f1s, training_times, testing_times = [], [], [], []
             for n in range(num_trials):
                 print(f'Starting trial {n}')
-                test_accuracy, training_time, testing_time = train_model(name, model)
+                test_accuracy, test_f1, training_time, testing_time = train_model(name, model)
 
                 test_accuracies.append(test_accuracy)
+                test_f1s.append(test_f1)
                 training_times.append(training_time)
                 testing_times.append(testing_time)
 
             avg_accuracy = np.mean(test_accuracies)
             std_accuracy = np.std(test_accuracies)
+
+            avg_f1 = np.mean(test_f1s)
+            std_f1 = np.std(test_f1s)
 
             avg_training_time = np.mean(training_times)
             std_training_time = np.std(training_times)
@@ -188,6 +193,7 @@ if __name__ == '__main__':
             print(f'''\
 {name} - {model}:
     Average Accuracy: {avg_accuracy:.1f} +/- {std_accuracy:.1f}
+    Average Micro F1: {avg_f1:.3f} +/- {std_f1:.3f}
     Average training time: {avg_training_time:.3f} +/- {std_training_time:.3f}
     Average testing time: {avg_testing_time:.3f} +/- {std_testing_time:.3f}
 ''')
