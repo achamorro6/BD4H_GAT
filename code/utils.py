@@ -49,7 +49,7 @@ def compute_batch_accuracy_sigmoid(output, target):
         pred = (pred > 0.5)
         correct = float(pred.eq(target).sum().item())
 
-        return correct / len(target)
+        return correct / target.numel()
 
 
 def compute_batch_micro_f1_sigmoid(output, target):
