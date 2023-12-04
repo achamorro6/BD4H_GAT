@@ -267,5 +267,5 @@ if __name__ == '__main__':
 
     inductive_trials = 10  # original paper has 10 runs for inductive dataset
     inductive_batch_size = 2
-    run_experiment(dataset_names=['PPI'], model_types=['ConstGat'], num_trials=inductive_trials,
+    run_experiment(dataset_names=['PPI'], model_types=['GAT','ConstGat'], num_trials=inductive_trials,
                    num_epochs=num_epochs, batch_size=inductive_batch_size)
