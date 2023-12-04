@@ -150,11 +150,6 @@ Based on the original paper, the researchers implemented a three-layer GAT model
 - GAT Layer 3 (classification layer)
 - Logistic sigmoid activation function
 
-#### Inductive Learning: Constant Attention Mechanism Model
-
-Researchers established a baseline to evaluate the impact of applying an attention mechanism compared to a closely related Graph Convolution Network (GNC) model.  The researchers achieve this by creating a static attention mechanism, applying a fixed attention coefficient value of 1 to all neighbors. Which has the effect of making all neighbors contain the same weight, and nothing is learned from the attention. The inductive model previously discussed for PPI stayed the same in architecture and parameters, with the exception of making attention coefficient constant. 
-
-
 ### Training and Optimization Configuration
 
 - **Initialization:**
@@ -173,4 +168,4 @@ Researchers established a baseline to evaluate the impact of applying an attenti
 - **Early Stopping:**
   - Researchers applied early stopping to the validation nodes, with a patience of 100 epochs in addition to the following:
     - Transductive: Cross-entropy loss with softmax activation and accuracy
-    - Inductive: Cross-entropy loss with softmax sigmoid activation and micro-F1 score
+    - Inductive: Cross-entropy loss with logistic sigmoid activation and micro-F1 score
