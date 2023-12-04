@@ -73,15 +73,19 @@ def train_model(dataset_name, model_type, num_epochs, batch_size):
         torch.backends.cudnn.benchmark = True
 
     if dataset_name in ['Cora', 'CiteSeer', 'Pubmed']:
-        train_loader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False,
-                                                   num_workers=NUM_WORKERS, collate_fn=custom_collate)
+        train_loader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, collate_fn=custom_collate)
         test_loader = train_loader
         val_loader = train_loader
 
     elif dataset_name == "PPI":
-        train_loader = PPI(f'../data/inductive/{dataset_name}', split="train", transform=NormalizeFeatures())
-        test_loader = PPI(f'../data/inductive/{dataset_name}', split="test", transform=NormalizeFeatures())
-        val_loader = PPI(f'../data/inductive/{dataset_name}', split="val", transform=NormalizeFeatures())
+        train_ppi = PPI(f'../data/inductive/{dataset_name}', split="train", transform=NormalizeFeatures())
+        train_loader = torch.utils.data.DataLoader(train_ppi, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, collate_fn=custom_collate)
+
+        test_ppi = PPI(f'../data/inductive/{dataset_name}', split="test", transform=NormalizeFeatures())
+        test_loader = torch.utils.data.DataLoader(test_ppi, batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, collate_fn=custom_collate)
+
+        val_ppi = PPI(f'../data/inductive/{dataset_name}', split="val", transform=NormalizeFeatures())
+        val_loader = torch.utils.data.DataLoader(val_ppi, batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, collate_fn=custom_collate)
 
     if dataset_name in ['Cora', 'CiteSeer']:
         # For 'Cora', 'CiteSeer'
@@ -263,5 +267,5 @@ if __name__ == '__main__':
 
     inductive_trials = 10  # original paper has 10 runs for inductive dataset
     inductive_batch_size = 2
-    run_experiment(dataset_names=['PPI'], model_types=['GAT', 'ConstGat'], num_trials=inductive_trials,
+    run_experiment(dataset_names=['PPI'], model_types=['ConstGat'], num_trials=inductive_trials,
                    num_epochs=num_epochs, batch_size=inductive_batch_size)
