@@ -4,11 +4,14 @@ from time import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models import TransductiveGAT, GCN
+from models import TransductiveGAT, InductiveGAT, GCN
 from datasets import get_dataset
 from utils import train, evaluate
 from plots import plot_learning_curves
 import numpy as np
+from torch_geometric.data import Batch
+from torch_geometric.datasets import PPI
+from torch_geometric.transforms import NormalizeFeatures
 
 """
 #### Original paper uses the following parameters:
@@ -32,12 +35,16 @@ import numpy as np
 """
 
 
-def train_model(dataset_name, model_type):
+def custom_collate(batch):
+    return Batch.from_data_list(batch)
+
+
+def train_model(dataset_name, model_type, num_epochs, batch_size):
     """
     Train a model of `model_type` using `dataset_name` as the dataset.
 
     :param dataset_name: Name of dataset. Valid options are in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'}.
-    :param model_type: Model type. Valid options are in {'GAT', 'GCN64', 'GCN64ELU'}.
+    :param model_type: Model type. Valid options are in {'GAT', 'GCN64', 'GCN64ELU','ConstGat'}.
 
     :return None:
     :raises ValueError: If `dataset_name` is not in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'} or if
@@ -46,7 +53,7 @@ def train_model(dataset_name, model_type):
     if dataset_name not in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'}:
         raise ValueError(f"Invalid dataset name {dataset_name}")
 
-    if model_type not in {'GAT', 'GCN64', 'GCN64ELU'}:
+    if model_type not in {'GAT', 'GCN64', 'GCN64ELU', 'ConstGat'}:
         raise ValueError(f"Invalid model type {model_type}")
 
     PATH_OUTPUT = '../output/'  # Specifies the path where to save model to.
@@ -55,13 +62,26 @@ def train_model(dataset_name, model_type):
     # available ['Cora', 'CiteSeer', 'Pubmed', 'PPI']
     dataset = get_dataset(dataset_name)
 
-    NUM_EPOCHS = 100000  # Maximum number of iterations.
+    NUM_EPOCHS = num_epochs  # Maximum number of iterations.
+    BATCH_SIZE = batch_size
     USE_CUDA = True  # Set to True if you want to use GPU.
+    NUM_WORKERS = 0  # Number of threads used by DataLoader. You can adjust this according to your machine spec.
 
     device = torch.device("cuda" if USE_CUDA and torch.cuda.is_available() else "cpu")
     if device.type == "cuda":
         torch.backends.cudnn.deterministic = False
         torch.backends.cudnn.benchmark = True
+
+    if dataset_name in ['Cora', 'CiteSeer', 'Pubmed']:
+        train_loader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False,
+                                                   num_workers=NUM_WORKERS, collate_fn=custom_collate)
+        test_loader = train_loader
+        val_loader = train_loader
+
+    elif dataset_name == "PPI":
+        train_loader = PPI(f'../data/inductive/{dataset_name}', split="train", transform=NormalizeFeatures())
+        test_loader = PPI(f'../data/inductive/{dataset_name}', split="test", transform=NormalizeFeatures())
+        val_loader = PPI(f'../data/inductive/{dataset_name}', split="val", transform=NormalizeFeatures())
 
     if dataset_name in ['Cora', 'CiteSeer']:
         # For 'Cora', 'CiteSeer'
@@ -84,7 +104,7 @@ def train_model(dataset_name, model_type):
             model = TransductiveGAT(dataset.num_node_features, dataset.num_classes, 8, 8)
             save_file = 'TransductivePubmed_GAT.pth'
         elif model_type == 'GCN64':
-            model = GCN(dataset.num_node_features, dataset.num_classes, 64)
+            model = GCN(dataset.num_node_features, dataset.num_classes, 64, activation_function=F.relu)
             save_file = 'Transductive_Pubmed_GCN.pth'
         elif model_type == 'GCN64ELU':
             model = GCN(dataset.num_node_features, dataset.num_classes, 64, activation_function=F.elu)
@@ -92,10 +112,27 @@ def train_model(dataset_name, model_type):
 
         l2_reg = 0.001
         learning_rate = 0.01
+
+    elif dataset_name == 'PPI':
+        # For 'Pubmed'
+        if model_type == 'GAT':
+            model = InductiveGAT(dataset.num_node_features, dataset.num_classes, 4, 6)
+            save_file = 'InductiveGAT_PPI_GAT.pth'
+        elif model_type == 'ConstGat':
+            model = InductiveGAT(dataset.num_node_features, dataset.num_classes, 1, 6)
+            save_file = 'InductiveGAT_PPI_ConstGAT.pth'
+
+        l2_reg = 0  # not applied
+        learning_rate = 0.005
     else:
         raise AssertionError("Wrong!")
 
-    criterion = nn.CrossEntropyLoss()
+    if dataset_name in ['Cora', 'CiteSeer', 'Pubmed']:
+        criterion = nn.CrossEntropyLoss()
+    elif dataset_name == 'PPI':
+        criterion = nn.BCEWithLogitsLoss()
+    else:
+        raise AssertionError("Wrong!")
 
     model.to(device)
     criterion.to(device)
@@ -104,6 +141,7 @@ def train_model(dataset_name, model_type):
 
     best_val_acc = 0.0
     best_val_loss = 100.0
+    best_val_f1 = 0.0
 
     # This is used for early stopping, where if the metric doesn't improve within `patience` epochs, the model
     # is considered converged.
@@ -117,14 +155,19 @@ def train_model(dataset_name, model_type):
     for epoch in range(NUM_EPOCHS):
         # Train the model on the training set.
         training_time_start = time()
-        train_loss, train_accuracy, train_f1 = train(model, device, dataset[0], criterion, optimizer)
-        training_time_end = time()
+        if dataset_name in ['Cora', 'CiteSeer', 'Pubmed']:
+            train_loss, train_accuracy, train_f1 = train(model, device, train_loader, criterion, optimizer, 'train')
+        elif dataset_name == "PPI":
+            train_loss, train_accuracy, train_f1 = train(model, device, train_loader, criterion, optimizer, 'PPI')
 
+        training_time_end = time()
         training_time_total += training_time_end - training_time_start
 
         # Validate the model using the validation set.
-        valid_loss, valid_accuracy, valid_f1, valid_results = evaluate(model, device, dataset[0], criterion,
-                                                                       dataset[0].val_mask)
+        if dataset_name in ['Cora', 'CiteSeer', 'Pubmed']:
+            valid_loss, valid_accuracy, valid_f1, valid_results = evaluate(model, device, val_loader, criterion, 'val')
+        elif dataset_name == "PPI":
+            valid_loss, valid_accuracy, valid_f1, valid_results = evaluate(model, device, val_loader, criterion, 'PPI')
 
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
@@ -137,9 +180,16 @@ def train_model(dataset_name, model_type):
 
         # If the current accuracy is higher or equal to the current best accuracy and the current loss or lower or equal
         # to the current lowest loss, the current model is considered the best.
-        is_best = valid_accuracy >= best_val_acc and valid_loss <= best_val_loss
-        if is_best:
+        if dataset_name in ['Cora', 'CiteSeer', 'Pubmed'] and (
+                valid_accuracy >= best_val_acc and valid_loss <= best_val_loss):
             best_val_acc = valid_accuracy
+            best_val_loss = valid_loss
+            torch.save(model, os.path.join(PATH_OUTPUT, save_file), _use_new_zipfile_serialization=False)
+            patience_counter = 0  # Reset counter when there's an improvement.
+            continue
+
+        elif dataset_name == 'PPI' and (valid_f1 >= best_val_f1 and valid_loss <= best_val_loss):
+            best_val_f1 = valid_f1
             best_val_loss = valid_loss
             torch.save(model, os.path.join(PATH_OUTPUT, save_file), _use_new_zipfile_serialization=False)
             patience_counter = 0  # Reset counter when there's an improvement.
@@ -153,31 +203,29 @@ def train_model(dataset_name, model_type):
             break
 
     plot_learning_curves(PLOT_PATH_OUTPUT, dataset_name, train_losses, valid_losses, train_accuracies, valid_accuracies,
-                         model_type)
+                         train_f1s, valid_f1s, model_type)
 
     # Load the best model that was obtained during training.
     best_model = torch.load(os.path.join(PATH_OUTPUT, save_file))
     # Test the model performance on the testing set.
     testing_time_start = time()
-    test_loss, test_accuracy, test_f1, test_results = evaluate(best_model, device, dataset[0], criterion,
-                                                               dataset[0].test_mask)
+    if dataset_name in ['Cora', 'CiteSeer', 'Pubmed']:
+        test_loss, test_accuracy, test_f1, test_results = evaluate(best_model, device, test_loader, criterion, 'test')
+    elif dataset_name == "PPI":
+        test_loss, test_accuracy, test_f1, test_results = evaluate(best_model, device, test_loader, criterion, 'PPI')
     testing_time = time() - testing_time_start
 
     return test_accuracy, test_f1, training_time_total, testing_time
 
 
-if __name__ == '__main__':
-    dataset_names = ['Cora', 'CiteSeer', 'Pubmed']
-    model_types = ['GAT', 'GCN64', 'GCN64ELU']
-    num_trials = 100  # original paper has 100 runs for transductive datasets
-
+def run_experiment(dataset_names, model_types, num_trials, num_epochs, batch_size):
     for name in dataset_names:
         for model in model_types:
             print(f'Training: {name} - {model}')
             test_accuracies, test_f1s, training_times, testing_times = [], [], [], []
             for n in range(num_trials):
                 print(f'Starting trial {n}')
-                test_accuracy, test_f1, training_time, testing_time = train_model(name, model)
+                test_accuracy, test_f1, training_time, testing_time = train_model(name, model, num_epochs, batch_size)
 
                 test_accuracies.append(test_accuracy)
                 test_f1s.append(test_f1)
@@ -197,9 +245,23 @@ if __name__ == '__main__':
             std_testing_time = np.std(testing_times)
 
             print(f'''\
-{name} - {model}:
-    Average Accuracy: {avg_accuracy:.1f} +/- {std_accuracy:.1f}
-    Average Micro F1: {avg_f1:.3f} +/- {std_f1:.3f}
-    Average training time: {avg_training_time:.3f} +/- {std_training_time:.3f}
-    Average testing time: {avg_testing_time:.3f} +/- {std_testing_time:.3f}
-''')
+    {name} - {model}:
+        Average Accuracy: {avg_accuracy:.1f} +/- {std_accuracy:.1f}
+        Average Micro F1: {avg_f1:.3f} +/- {std_f1:.3f}
+        Average training time: {avg_training_time:.3f} +/- {std_training_time:.3f}
+        Average testing time: {avg_testing_time:.3f} +/- {std_testing_time:.3f}
+    ''')
+
+
+if __name__ == '__main__':
+    num_epochs = 10000
+
+    transductive_trials = 100  # original paper has 100 runs for transductive dataset
+    transductive_batch_size = 1
+    run_experiment(dataset_names=['Cora', 'CiteSeer', 'Pubmed'], model_types=['GAT', 'GCN64', 'GCN64ELU'],
+                   num_trials=transductive_trials, num_epochs=num_epochs, batch_size=transductive_batch_size)
+
+    inductive_trials = 10  # original paper has 10 runs for inductive dataset
+    inductive_batch_size = 2
+    run_experiment(dataset_names=['PPI'], model_types=['GAT', 'ConstGat'], num_trials=inductive_trials,
+                   num_epochs=num_epochs, batch_size=inductive_batch_size)

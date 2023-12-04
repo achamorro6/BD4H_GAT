@@ -18,7 +18,7 @@ class TransductiveGAT(nn.Module):
 
         self.num_features = num_features
         self.num_classes = num_classes
-        self.num_input_att_heads = num_input_att_heads  # 1 for constant; 8 for others
+        self.num_input_att_heads = num_input_att_heads
         self.num_output_att_heads = num_output_att_heads
         self.num_hidden_units = 8
         self.drop_out = 0.6
@@ -75,4 +75,53 @@ class GCN(nn.Module):
         # Apply the second graph convolutional layer
         x = self.conv2(x, edge_index)
 
+        return x
+
+
+class InductiveGAT(nn.Module):
+    def __init__(self, num_features, num_classes, num_input_att_heads, num_output_att_heads):
+        """
+        Initialize a transductive GAT model.
+
+        :param num_features: Number of features.
+        :param num_classes: Number of classes.
+        :param num_input_att_heads: Number of input attention heads.
+        :param num_output_att_heads: Number of output attention heads.
+        """
+        super(InductiveGAT, self).__init__()
+
+        self.num_features = num_features
+        self.num_classes = num_classes
+        self.num_input_att_heads = num_input_att_heads
+        self.num_output_att_heads = num_output_att_heads
+        self.num_hidden_units = 254
+        # no drop out
+
+        # First Layer:
+        self.conv1 = GATConv(in_channels=self.num_features, out_channels=self.num_hidden_units,
+                             heads=self.num_input_att_heads, concat=True)
+        # Second Layer:
+        self.conv2 = GATConv(in_channels=self.num_hidden_units * self.num_input_att_heads,
+                             out_channels=self.num_hidden_units, heads=self.num_input_att_heads, concat=True)
+        # Third Layer:
+        self.conv3 = GATConv(in_channels=self.num_hidden_units * self.num_input_att_heads,
+                             out_channels=self.num_classes, heads=self.num_output_att_heads, concat=False)
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        # apply the first GAT layer
+        x = self.conv1(x, edge_index)
+        # print(x.shape)
+        # followed by exponential linear unit activation function
+        x = F.elu(x)
+        # apply the second GAT layer
+        x = self.conv2(x, edge_index)
+        # print(x.shape)
+        # followed by exponential linear unit activation function
+        x = F.elu(x)
+        # apply the third GAT layer
+        x = self.conv3(x, edge_index)
+        # print(x.shape)
+        # sigmoid activation function done in loss calculation
+        # x = torch.sigmoid(x)
         return x

@@ -18,6 +18,9 @@ def get_dataset(dataset_name):
     # Download the dataset and normalize the features.
     if dataset_name == 'PPI':
         dataset = PPI(f'../data/inductive/{dataset_name}', transform=NormalizeFeatures())
+
+
+
     else:
         dataset = Planetoid(f'../data/transductive/{dataset_name}', dataset_name, transform=NormalizeFeatures())
 
