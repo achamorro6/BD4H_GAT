@@ -89,6 +89,7 @@ Similar implementation to what has been describe with the following changes:
 #### Transductive Learning: GCN64 Model
 
 Researchers compared the inductive GAT model to a common baseline Graph Convolution Network (GNC) model with 64 hidden parameters and two GNC layers.
+We compared both rectified linear unit (ReLU) and exponential linear unit (ELU).
 
 ##### GCN64 Model Hyperparameters
 
@@ -106,14 +107,14 @@ Researchers compared the inductive GAT model to a common baseline Graph Convolut
   - L2 regularization was set to 0.0005.
 
 - **Activation Functions:**
-  - A rectified linear unit (ReLU) activation function was applied for classification
+  - A rectified linear unit (ReLU) or exponential linear unit (ELU) activation function was applied
   - A softmax activation function was applied for classification. 
 
 #### Transductive Learning: High-Level Feed-Forward Implementation (GCN-64)
 
 - Dropout
 - GCN Layer 1
-- ReLU activation function
+- ReLU/ELU activation function
 - Dropout
 - GCN Layer 2 (classification layer)
 - Softmax activation function
