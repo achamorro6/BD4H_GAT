@@ -38,7 +38,7 @@ def compute_batch_micro_f1(output, target):
     """Computes the mico F1 for a batch"""
     with torch.no_grad():
         _, pred = output.max(1)
-        micro_f1 = f1_score(target, pred, average='micro')
+        micro_f1 = f1_score(target.cpu(), pred.cpu(), average='micro')
         return micro_f1
 
 
@@ -49,7 +49,7 @@ def compute_batch_accuracy_sigmoid(output, target):
         pred = (pred > 0.5)
         correct = float(pred.eq(target).sum().item())
 
-        return correct * 100 / len(target)
+        return correct / len(target)
 
 
 def compute_batch_micro_f1_sigmoid(output, target):
