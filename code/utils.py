@@ -42,22 +42,22 @@ def compute_batch_micro_f1(output, target):
         return micro_f1
 
 
-def compute_batch_accuracy_b(output, target):
-    """Computes the accuracy for a batch"""
+def compute_batch_accuracy_sigmoid(output, target):
+    """Computes the accuracy for a batch using sigmoid activation."""
     with torch.no_grad():
         pred = torch.sigmoid(output)
         pred = (pred > 0.5)
         correct = float(pred.eq(target).sum().item())
 
-        return correct / len(target)
+        return correct * 100 / len(target)
 
 
-def compute_batch_micro_f1_b(output, target):
-    """Computes the mico F1 for a batch"""
+def compute_batch_micro_f1_sigmoid(output, target):
+    """Computes the micro F1 for a batch using sigmoid activation."""
     with torch.no_grad():
         pred = torch.sigmoid(output)
         pred = (pred > 0.5)
-        micro_f1 = f1_score(target, pred, average='micro')
+        micro_f1 = f1_score(target.cpu(), pred.cpu(), average='micro')
         return micro_f1
 
 
@@ -85,8 +85,8 @@ def train(model, device, data_loader, criterion, optimizer, mask_type):
         else:
             output = model(data)
             target = data.y
-            func_accuracy = compute_batch_accuracy_b
-            func_micro_f1 = compute_batch_micro_f1_b
+            func_accuracy = compute_batch_accuracy_sigmoid
+            func_micro_f1 = compute_batch_micro_f1_sigmoid
 
         loss = criterion(output, target)
         assert not np.isnan(loss.item()), 'Model diverged with loss = NaN'
@@ -127,8 +127,8 @@ def evaluate(model, device, data_loader, criterion, mask_type):
             else:
                 output = model(data)
                 target = data.y
-                func_accuracy = compute_batch_accuracy_b
-                func_micro_f1 = compute_batch_micro_f1_b
+                func_accuracy = compute_batch_accuracy_sigmoid
+                func_micro_f1 = compute_batch_micro_f1_sigmoid
 
             loss = criterion(output, target)
 
