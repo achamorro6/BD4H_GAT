@@ -173,6 +173,9 @@ def train_model(dataset_name, model_type, num_epochs, batch_size):
         elif dataset_name == "PPI":
             valid_loss, valid_accuracy, valid_f1, valid_results = evaluate(model, device, val_loader, criterion, 'PPI')
 
+        print(f'{train_accuracy}, {train_f1}')
+        print(f'{valid_accuracy}, {valid_f1}')
+
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
 
@@ -206,8 +209,8 @@ def train_model(dataset_name, model_type, num_epochs, batch_size):
         if patience_counter == patience:
             break
 
-    plot_learning_curves(PLOT_PATH_OUTPUT, dataset_name, train_losses, valid_losses, train_accuracies, valid_accuracies,
-                         train_f1s, valid_f1s, model_type)
+    plot_learning_curves(PLOT_PATH_OUTPUT, dataset_name, train_losses, valid_losses, train_accuracies, train_f1s,
+                         valid_f1s, valid_accuracies, model_type)
 
     # Load the best model that was obtained during training.
     best_model = torch.load(os.path.join(PATH_OUTPUT, save_file))
@@ -260,10 +263,10 @@ def run_experiment(dataset_names, model_types, num_trials, num_epochs, batch_siz
 if __name__ == '__main__':
     num_epochs = 10000
 
-    transductive_trials = 100  # original paper has 100 runs for transductive dataset
-    transductive_batch_size = 1
-    run_experiment(dataset_names=['Cora', 'CiteSeer', 'Pubmed'], model_types=['GAT', 'GCN64', 'GCN64ELU'],
-                   num_trials=transductive_trials, num_epochs=num_epochs, batch_size=transductive_batch_size)
+    # transductive_trials = 100  # original paper has 100 runs for transductive dataset
+    # transductive_batch_size = 1
+    # run_experiment(dataset_names=['Cora', 'CiteSeer', 'Pubmed'], model_types=['GAT', 'GCN64', 'GCN64ELU'],
+    #                num_trials=transductive_trials, num_epochs=num_epochs, batch_size=transductive_batch_size)
 
     inductive_trials = 10  # original paper has 10 runs for inductive dataset
     inductive_batch_size = 2
