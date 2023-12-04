@@ -44,7 +44,7 @@ def train_model(dataset_name, model_type, num_epochs, batch_size):
     Train a model of `model_type` using `dataset_name` as the dataset.
 
     :param dataset_name: Name of dataset. Valid options are in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'}.
-    :param model_type: Model type. Valid options are in {'GAT', 'GCN64', 'GCN64ELU','ConstGat'}.
+    :param model_type: Model type. Valid options are in {'GAT', 'GCN64', 'GCN64ELU'}.
 
     :return None:
     :raises ValueError: If `dataset_name` is not in {'Cora', 'CiteSeer', 'Pubmed', 'PPI'} or if
@@ -82,10 +82,10 @@ def train_model(dataset_name, model_type, num_epochs, batch_size):
         train_loader = torch.utils.data.DataLoader(train_ppi, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, collate_fn=custom_collate)
 
         test_ppi = PPI(f'../data/inductive/{dataset_name}', split="test", transform=NormalizeFeatures())
-        test_loader = torch.utils.data.DataLoader(test_ppi, batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, collate_fn=custom_collate)
+        test_loader = torch.utils.data.DataLoader(test_ppi, batch_size=1, shuffle=False, num_workers=NUM_WORKERS, collate_fn=custom_collate)
 
         val_ppi = PPI(f'../data/inductive/{dataset_name}', split="val", transform=NormalizeFeatures())
-        val_loader = torch.utils.data.DataLoader(val_ppi, batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, collate_fn=custom_collate)
+        val_loader = torch.utils.data.DataLoader(val_ppi, batch_size=1, shuffle=False, num_workers=NUM_WORKERS, collate_fn=custom_collate)
 
     if dataset_name in ['Cora', 'CiteSeer']:
         # For 'Cora', 'CiteSeer'
@@ -122,9 +122,8 @@ def train_model(dataset_name, model_type, num_epochs, batch_size):
         if model_type == 'GAT':
             model = InductiveGAT(dataset.num_node_features, dataset.num_classes, 4, 6)
             save_file = 'InductiveGAT_PPI_GAT.pth'
-        elif model_type == 'ConstGat':
-            model = InductiveGAT(dataset.num_node_features, dataset.num_classes, 1, 6)
-            save_file = 'InductiveGAT_PPI_ConstGAT.pth'
+        else:
+            raise ValueError("Invalid model type for PPI")
 
         l2_reg = 0  # not applied
         learning_rate = 0.005
@@ -172,9 +171,6 @@ def train_model(dataset_name, model_type, num_epochs, batch_size):
             valid_loss, valid_accuracy, valid_f1, valid_results = evaluate(model, device, val_loader, criterion, 'val')
         elif dataset_name == "PPI":
             valid_loss, valid_accuracy, valid_f1, valid_results = evaluate(model, device, val_loader, criterion, 'PPI')
-
-        print(f'{train_accuracy}, {train_f1}')
-        print(f'{valid_accuracy}, {valid_f1}')
 
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
@@ -261,14 +257,14 @@ def run_experiment(dataset_names, model_types, num_trials, num_epochs, batch_siz
 
 
 if __name__ == '__main__':
-    num_epochs = 10000
+    num_epochs = 100000
 
-    # transductive_trials = 100  # original paper has 100 runs for transductive dataset
-    # transductive_batch_size = 1
-    # run_experiment(dataset_names=['Cora', 'CiteSeer', 'Pubmed'], model_types=['GAT', 'GCN64', 'GCN64ELU'],
-    #                num_trials=transductive_trials, num_epochs=num_epochs, batch_size=transductive_batch_size)
+    transductive_trials = 100  # original paper has 100 runs for transductive dataset
+    transductive_batch_size = 1
+    run_experiment(dataset_names=['Cora', 'CiteSeer', 'Pubmed'], model_types=['GAT', 'GCN64', 'GCN64ELU'],
+                   num_trials=transductive_trials, num_epochs=num_epochs, batch_size=transductive_batch_size)
 
     inductive_trials = 10  # original paper has 10 runs for inductive dataset
     inductive_batch_size = 2
-    run_experiment(dataset_names=['PPI'], model_types=['GAT','ConstGat'], num_trials=inductive_trials,
+    run_experiment(dataset_names=['PPI'], model_types=['GAT'], num_trials=inductive_trials,
                    num_epochs=num_epochs, batch_size=inductive_batch_size)

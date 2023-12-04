@@ -50,6 +50,14 @@ class TransductiveGAT(nn.Module):
 
 class GCN(nn.Module):
     def __init__(self, num_features, num_classes, hidden_features, activation_function=F.relu):
+        """
+        Initialize a GCN model.
+
+        :param num_features: Number of features.
+        :param num_classes: Number of classes.
+        :param hidden_features: Number of hidden units.
+        :param activation_function: Activation function after each non-output layer.
+        """
         super(GCN, self).__init__()
 
         self.num_features = num_features
@@ -81,7 +89,7 @@ class GCN(nn.Module):
 class InductiveGAT(nn.Module):
     def __init__(self, num_features, num_classes, num_input_att_heads, num_output_att_heads):
         """
-        Initialize a transductive GAT model.
+        Initialize an inductive GAT model.
 
         :param num_features: Number of features.
         :param num_classes: Number of classes.
@@ -111,17 +119,14 @@ class InductiveGAT(nn.Module):
         x, edge_index = data.x, data.edge_index
         # apply the first GAT layer
         x = self.conv1(x, edge_index)
-        # print(x.shape)
         # followed by exponential linear unit activation function
         x = F.elu(x)
         # apply the second GAT layer
         x = self.conv2(x, edge_index)
-        # print(x.shape)
         # followed by exponential linear unit activation function
         x = F.elu(x)
         # apply the third GAT layer
         x = self.conv3(x, edge_index)
-        # print(x.shape)
         # sigmoid activation function done in loss calculation
         # x = torch.sigmoid(x)
         return x
